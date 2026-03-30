@@ -74,7 +74,7 @@
                                 <td class="px-6 py-4 text-gray-600">{{ $task->category->name ?? 'N/A' }}</td>
                                 <td class="px-6 py-4 text-center">
                                     <span class="badge-{{ $task->status }} px-3 py-1 rounded-full text-white text-sm font-semibold">
-                                        {{ ucfirst(str_replace('_', ' ', $task->status)) }}
+                                        {{ ucwords(str_replace('_', ' ', $task->status)) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 text-center">
@@ -86,13 +86,15 @@
                                     {{ $task->due_date ? $task->due_date->format('M d, Y') : '—' }}
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <a href="{{ route('tasks.show', $task) }}" class="text-blue-600 hover:text-blue-800 mr-3">👁️ View</a>
-                                    <a href="{{ route('tasks.edit', $task) }}" class="text-yellow-600 hover:text-yellow-800 mr-3">✏️ Edit</a>
-                                    <form method="POST" action="{{ route('tasks.destroy', $task) }}" style="display:inline;" onsubmit="return confirm('Move to trash?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-800">🗑️ Delete</button>
-                                    </form>
+                                    <div class="action-group" role="group" aria-label="Task actions">
+                                        <a href="{{ route('tasks.show', $task) }}" class="action-icon action-view" title="View task" aria-label="View {{ $task->title }}">📄</a>
+                                        <a href="{{ route('tasks.edit', $task) }}" class="action-icon action-edit" title="Edit task" aria-label="Edit {{ $task->title }}">✏️</a>
+                                        <form method="POST" action="{{ route('tasks.destroy', $task) }}" class="inline" data-confirm data-confirm-title="Move task to trash?" data-confirm-message="This task will be moved to the trash and can still be restored later." data-confirm-button="Move to Trash">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="action-icon action-delete" title="Delete task" aria-label="Delete {{ $task->title }}">🗑️</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

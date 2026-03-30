@@ -78,4 +78,27 @@ class TaskFeatureTest extends TestCase
             $firstTask->title,
         ]);
     }
+
+    public function test_in_progress_tasks_render_with_the_expected_label_and_badge(): void
+    {
+        $category = Category::create([
+            'name' => 'Personal',
+            'description' => 'Personal tasks',
+        ]);
+
+        Task::create([
+            'title' => 'Status badge task',
+            'description' => 'Should display as In Progress',
+            'due_date' => now()->addDays(1)->toDateString(),
+            'status' => 'in_progress',
+            'priority' => 'medium',
+            'category_id' => $category->id,
+        ]);
+
+        $response = $this->get(route('tasks.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('In Progress');
+        $response->assertSee('badge-in_progress', false);
+    }
 }

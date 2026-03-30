@@ -24,16 +24,14 @@
                                 <td class="px-6 py-4 text-gray-600">{{ $task->category->name ?? 'N/A' }}</td>
                                 <td class="px-6 py-4 text-gray-600">{{ $task->deleted_at->format('M d, Y g:i A') }}</td>
                                 <td class="px-6 py-4 text-center">
-                                    <a href="{{ route('tasks.restore', $task->id) }}" class="text-green-600 hover:text-green-800 mr-3 font-semibold">
-                                        ✅ Restore
-                                    </a>
-                                    <form method="POST" action="{{ route('tasks.forceDelete', $task->id) }}" style="display:inline;" onsubmit="return confirm('Permanently delete? This cannot be undone.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-700 hover:text-red-900 font-semibold">
-                                            ❌ Permanent Delete
-                                        </button>
-                                    </form>
+                                    <div class="action-group" role="group" aria-label="Trash actions">
+                                        <a href="{{ route('tasks.restore', $task->id) }}" class="action-icon action-restore" title="Restore task" aria-label="Restore {{ $task->title }}">♻️</a>
+                                        <form method="POST" action="{{ route('tasks.forceDelete', $task->id) }}" class="inline" data-confirm data-confirm-title="Permanently delete task?" data-confirm-message="This action cannot be undone. The task will be removed forever." data-confirm-button="Delete Permanently">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="action-icon action-force-delete" title="Permanent delete" aria-label="Permanently delete {{ $task->title }}">❌</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

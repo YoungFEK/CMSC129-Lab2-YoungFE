@@ -12,7 +12,7 @@
                     <a href="{{ route('tasks.edit', $task) }}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-yellow-600">
                         ✏️ Edit
                     </a>
-                    <form method="POST" action="{{ route('tasks.destroy', $task) }}" style="display:inline;" onsubmit="return confirm('Move this task to trash?');">
+                    <form method="POST" action="{{ route('tasks.destroy', $task) }}" style="display:inline;" data-confirm data-confirm-title="Move task to trash?" data-confirm-message="You can restore this task later from the Trash page." data-confirm-button="Move to Trash">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn-danger text-white px-4 py-2 rounded-lg font-semibold">
@@ -31,7 +31,7 @@
                 <div>
                     <p class="text-gray-600 text-sm font-semibold">Status</p>
                     <span class="badge-{{ $task->status }} px-3 py-1 rounded-full text-white inline-block">
-                        {{ ucfirst(str_replace('_', ' ', $task->status)) }}
+                        {{ ucwords(str_replace('_', ' ', $task->status)) }}
                     </span>
                 </div>
                 <div>

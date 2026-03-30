@@ -2,7 +2,7 @@
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
         <div class="flex items-center">
             <a href="{{ route('tasks.index') }}" class="text-white text-2xl font-bold">
-                📋 Task Manager
+                📋 TodoList
             </a>
         </div>
 
