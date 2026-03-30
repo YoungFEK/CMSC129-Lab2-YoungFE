@@ -4,7 +4,7 @@ A full-stack web application demonstrating the **MVC (Model-View-Controller)** a
 
 ## 📸 Screenshots
 
-[Add your screenshots here]
+
 <img width="1892" height="832" alt="image" src="https://github.com/user-attachments/assets/6c255cf9-25e6-449c-91b9-0c4e54d40f19" />
 <img width="1918" height="856" alt="image" src="https://github.com/user-attachments/assets/aa1e60b8-a069-4aa8-a046-c2b579dbdb30" />
 
