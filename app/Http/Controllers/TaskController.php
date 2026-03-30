@@ -24,7 +24,8 @@ class TaskController extends Controller
             ->byStatus($status)
             ->byCategory($category)
             ->with('category')
-            ->latest('created_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate(10);
 
         $categories = Category::all();
@@ -97,9 +98,10 @@ class TaskController extends Controller
      */
     public function trash()
     {
-        $tasks = Task::trashed()
+        $tasks = Task::onlyTrashed()
                      ->with('category')
-                     ->latest('deleted_at')
+                     ->orderByDesc('deleted_at')
+                     ->orderByDesc('id')
                      ->paginate(10);
 
         return view('tasks.trash', compact('tasks'));

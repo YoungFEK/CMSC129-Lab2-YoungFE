@@ -72,11 +72,4 @@ class Task extends Model
         return $query;
     }
 
-    /**
-     * Scope: Get only trashed (soft-deleted) tasks
-     */
-    public function scopeTrashed($query)
-    {
-        return $query->onlyTrashed();
-    }
 }
