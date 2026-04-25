@@ -2,26 +2,23 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use Illuminate\Database\Seeder;
+use App\Models\Category;
 
 class CategorySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $categories = [
-            ['name' => 'Work', 'description' => 'Work-related tasks'],
-            ['name' => 'Personal', 'description' => 'Personal growth and tasks'],
-            ['name' => 'Shopping', 'description' => 'Shopping and errands'],
-            ['name' => 'Health', 'description' => 'Health and fitness tasks'],
-            ['name' => 'Education', 'description' => 'Learning and educational tasks'],
+            ['name' => 'Work',     'description' => 'Professional and job-related tasks'],
+            ['name' => 'Personal', 'description' => 'Personal errands and goals'],
+            ['name' => 'School',   'description' => 'Academic assignments and studying'],
+            ['name' => 'Health',   'description' => 'Fitness, wellness, and medical tasks'],
+            ['name' => 'Finance',  'description' => 'Bills, budgets, and money management'],
         ];
 
-        foreach ($categories as $category) {
-            Category::create($category);
+        foreach ($categories as $cat) {
+            Category::firstOrCreate(['name' => $cat['name']], $cat);
         }
     }
 }

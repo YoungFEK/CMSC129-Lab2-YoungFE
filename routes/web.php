@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ChatController;
 
 // Root route - redirect to tasks
 Route::get('/', function () {
@@ -19,3 +20,46 @@ Route::resource('tasks', TaskController::class);
 Route::get('/tasks-trash/trash', [TaskController::class, 'trash'])->name('tasks.trash');
 Route::get('/tasks-trash/{id}/restore', [TaskController::class, 'restore'])->name('tasks.restore');
 Route::delete('/tasks-trash/{id}/force-delete', [TaskController::class, 'forceDelete'])->name('tasks.forceDelete');
+
+// AI Chat Routes
+Route::post('/chat', [ChatController::class, 'chat'])->name('chat');
+Route::post('/chat/confirm', [ChatController::class, 'confirm'])->name('chat.confirm');
+
+Route::get('/test-groq', function () {
+    $response = \Illuminate\Support\Facades\Http::withHeaders([
+        'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+        'Content-Type'  => 'application/json',
+    ])->post('https://api.groq.com/openai/v1/chat/completions', [
+        'model'    => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        'messages' => [['role' => 'user', 'content' => 'Say hello']],
+        'max_tokens' => 50,
+    ]);
+
+    return response()->json([
+        'status' => $response->status(),
+        'body'   => $response->json(),
+    ]);
+});
+
+Route::post('/test-chat', function (\Illuminate\Http\Request $request) {
+    \Log::info('Test chat hit', $request->all());
+
+    $response = \Illuminate\Support\Facades\Http::withHeaders([
+        'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+        'Content-Type'  => 'application/json',
+    ])->timeout(30)->post('https://api.groq.com/openai/v1/chat/completions', [
+        'model'    => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        'messages' => [
+            ['role' => 'system', 'content' => 'You are a helpful assistant.'],
+            ['role' => 'user',   'content' => $request->message ?? 'hello'],
+        ],
+        'max_tokens'  => 100,
+        'temperature' => 0.3,
+    ]);
+
+    return response()->json([
+        'status'   => $response->status(),
+        'ok'       => $response->ok(),
+        'response' => $response->json(),
+    ]);
+});

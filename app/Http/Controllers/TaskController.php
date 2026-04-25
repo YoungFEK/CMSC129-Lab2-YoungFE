@@ -3,131 +3,88 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
-use App\Models\Category;
+use App\Services\TaskService;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
-    /**
-     * Display a listing of the tasks (with search/filter).
-     */
+    public function __construct(
+        private readonly TaskService $taskService
+    ) {}
+
     public function index(Request $request)
     {
-        $search = $request->get('search');
-        $status = $request->get('status');
-        $category = $request->get('category');
+        $filters = $request->only(['search', 'status', 'category']);
 
-        $tasks = Task::query()
-            ->search($search)
-            ->byStatus($status)
-            ->byCategory($category)
-            ->with('category')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->paginate(10);
+        $tasks      = $this->taskService->getPaginatedTasks($filters);
+        $categories = $this->taskService->getAllCategories();
+        $statuses   = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'done' => 'Done'];
 
-        $categories = Category::all();
-        $statuses = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'done' => 'Done'];
-
-        return view('tasks.index', compact('tasks', 'categories', 'statuses', 'search', 'status', 'category'));
+        return view('tasks.index', compact('tasks', 'categories', 'statuses') + $filters);
     }
 
-    /**
-     * Show the form for creating a new task.
-     */
     public function create()
     {
-        $categories = Category::all();
+        $categories = $this->taskService->getAllCategories();
         return view('tasks.create', compact('categories'));
     }
 
-    /**
-     * Store a newly created task in storage.
-     */
     public function store(StoreTaskRequest $request)
     {
-        Task::create($request->validated());
+        $this->taskService->createTask($request->validated());
 
         return redirect()->route('tasks.index')
-                        ->with('success', 'Task created successfully!');
+                         ->with('success', 'Task created successfully!');
     }
 
-    /**
-     * Display the specified task.
-     */
     public function show(Task $task)
     {
         return view('tasks.show', compact('task'));
     }
 
-    /**
-     * Show the form for editing the specified task.
-     */
     public function edit(Task $task)
     {
-        $categories = Category::all();
+        $categories = $this->taskService->getAllCategories();
         return view('tasks.edit', compact('task', 'categories'));
     }
 
-    /**
-     * Update the specified task in storage.
-     */
     public function update(UpdateTaskRequest $request, Task $task)
     {
-        $task->update($request->validated());
+        $this->taskService->updateTask($task, $request->validated());
 
         return redirect()->route('tasks.show', $task)
-                        ->with('success', 'Task updated successfully!');
+                         ->with('success', 'Task updated successfully!');
     }
 
-    /**
-     * Remove the specified task from storage (soft delete).
-     */
     public function destroy(Task $task)
     {
-        $task->delete();
+        $this->taskService->deleteTask($task);
 
         return redirect()->route('tasks.index')
-                        ->with('success', 'Task moved to trash.');
+                         ->with('success', 'Task moved to trash.');
     }
 
-    /**
-     * Display all soft-deleted tasks (trash).
-     */
     public function trash()
     {
-        $tasks = Task::onlyTrashed()
-                     ->with('category')
-                     ->orderByDesc('deleted_at')
-                     ->orderByDesc('id')
-                     ->paginate(10);
-
+        $tasks = $this->taskService->getTrashedTasks();
         return view('tasks.trash', compact('tasks'));
     }
 
-    /**
-     * Restore a soft-deleted task.
-     */
     public function restore($id)
     {
-        $task = Task::withTrashed()->findOrFail($id);
-        $task->restore();
+        $this->taskService->restoreTask($id);
 
         return redirect()->route('tasks.index')
-                        ->with('success', 'Task restored successfully!');
+                         ->with('success', 'Task restored successfully!');
     }
 
-    /**
-     * Permanently delete a soft-deleted task.
-     */
     public function forceDelete($id)
     {
-        $task = Task::withTrashed()->findOrFail($id);
-        $task->forceDelete();
+        $this->taskService->forceDeleteTask($id);
 
         return redirect()->route('tasks.trash')
-                        ->with('success', 'Task permanently deleted!');
+                         ->with('success', 'Task permanently deleted!');
     }
 }
