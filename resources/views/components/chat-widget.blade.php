@@ -15,52 +15,62 @@
 <!-- Chat Window -->
 <div id="chat-window"
     class="fixed bottom-24 right-6 z-50 w-96 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 hidden"
-    style="height: 520px; border: 1px solid #e5e7eb;">
+    style="max-height: calc(100vh - 5rem); min-height: 520px; border: 1px solid #e5e7eb;">
 
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-3 text-white"
+    <div class="flex flex-col gap-2 px-4 py-3 text-white"
         style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">
-        <div class="flex items-center gap-2">
-            <span class="text-xl">🤖</span>
-            <div>
-                <div class="font-semibold text-sm">Task Assistant</div>
-                <div class="text-xs opacity-80">Ask me anything about your tasks</div>
+        <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-xl">🤖</span>
+                <div>
+                    <div class="font-semibold text-sm">Task Assistant</div>
+                    <div class="text-xs opacity-80">Ask me anything about your tasks</div>
+                </div>
             </div>
+            <button onclick="toggleChat()" class="text-white opacity-70 hover:opacity-100 text-xl leading-none">✕</button>
         </div>
-        <button onclick="toggleChat()" class="text-white opacity-70 hover:opacity-100 text-xl leading-none">✕</button>
-    </div>
-
-    <!-- Messages -->
-    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-        <!-- Welcome message -->
         <div class="flex gap-2">
-            <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-                style="background:#ede9fe;">🤖</div>
-            <div class="bg-white rounded-2xl rounded-tl-sm px-3 py-2 text-sm text-gray-700 shadow-sm max-w-xs">
-                Hi! I'm your Task Assistant 👋<br>
-                Ask me about your tasks or tell me to create, update, or delete them!<br><br>
-                <span class="text-gray-400 text-xs">Try: "Show me high priority tasks"</span>
-            </div>
+            <button id="chat-tab-button" onclick="setChatTab('chatbot')"
+                class="flex-1 rounded-xl bg-white text-gray-900 px-3 py-2 text-sm font-semibold shadow-sm">
+                Chatbot
+            </button>
+            <button id="assistant-tab-button" onclick="setChatTab('assistant')"
+                class="flex-1 rounded-xl bg-transparent text-gray-200 px-3 py-2 text-sm font-semibold hover:bg-white hover:text-gray-900 transition">
+                Assistant
+            </button>
         </div>
     </div>
 
-    <!-- Confirmation Dialog (hidden by default) -->
-    <div id="confirm-bar" class="hidden bg-amber-50 border-t border-amber-200 p-3">
-        <div id="confirm-text" class="text-xs text-amber-800 mb-2"></div>
-        <div class="flex gap-2">
-            <button onclick="confirmAction(true)"
-                class="flex-1 bg-red-500 text-white text-xs py-1.5 rounded-lg font-semibold hover:bg-red-600">
-                ✓ Yes, confirm
-            </button>
-            <button onclick="confirmAction(false)"
-                class="flex-1 bg-gray-200 text-gray-700 text-xs py-1.5 rounded-lg font-semibold hover:bg-gray-300">
-                ✕ Cancel
-            </button>
+    <div id="chat-pane" class="flex-1 flex flex-col min-h-0">
+        <!-- Messages -->
+        <div id="chat-messages" class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-gray-50"></div>
+
+        <div id="assistant-pane" class="hidden rounded-2xl bg-white p-4 shadow-sm mt-3">
+            <div class="text-sm text-gray-500 uppercase tracking-wide font-semibold mb-2">Assistant mode</div>
+            <p class="text-sm text-gray-600">
+                Use this mode only for task creation, updates, and deletion. Switch to Chatbot mode for search, summaries, or task queries.
+            </p>
+        </div>
+
+        <!-- Confirmation Dialog (hidden by default) -->
+        <div id="confirm-bar" class="hidden bg-amber-50 border-t border-amber-200 p-3 mt-3">
+            <div id="confirm-text" class="text-xs text-amber-800 mb-2"></div>
+            <div class="flex gap-2">
+                <button onclick="confirmAction(true)"
+                    class="flex-1 bg-red-500 text-white text-xs py-1.5 rounded-lg font-semibold hover:bg-red-600">
+                    ✓ Yes, confirm
+                </button>
+                <button onclick="confirmAction(false)"
+                    class="flex-1 bg-gray-200 text-gray-700 text-xs py-1.5 rounded-lg font-semibold hover:bg-gray-300">
+                    ✕ Cancel
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Input Area -->
-    <div class="p-3 bg-white border-t border-gray-100">
+    <div id="chat-input-area" class="p-3 bg-white border-t border-gray-100">
         <div class="flex gap-2 items-end">
             <textarea id="chat-input"
                 placeholder="Ask about tasks or give a command..."
@@ -86,6 +96,40 @@
 let chatHistory     = [];       // [{role, content}]
 let pendingConf     = null;     // pending confirmation data
 let isLoading       = false;
+let activeChatTab   = 'chatbot';
+
+// ─── Tab Switching ───────────────────────────────────
+function setChatTab(tab) {
+    activeChatTab = tab;
+
+    const assistantPane = document.getElementById('assistant-pane');
+    const chatTabButton = document.getElementById('chat-tab-button');
+    const assistantTabButton = document.getElementById('assistant-tab-button');
+    const input = document.getElementById('chat-input');
+
+    const activeClasses = ['bg-white', 'text-gray-900', 'shadow-sm'];
+    const inactiveClasses = ['bg-transparent', 'text-gray-200'];
+
+    if (tab === 'assistant') {
+        assistantPane.classList.remove('hidden');
+        chatTabButton.classList.remove(...activeClasses);
+        chatTabButton.classList.add(...inactiveClasses);
+        assistantTabButton.classList.add(...activeClasses);
+        assistantTabButton.classList.remove(...inactiveClasses);
+        input.placeholder = 'Assistant mode: CRUD commands only...';
+    } else {
+        assistantPane.classList.add('hidden');
+        chatTabButton.classList.add(...activeClasses);
+        chatTabButton.classList.remove(...inactiveClasses);
+        assistantTabButton.classList.remove(...activeClasses);
+        assistantTabButton.classList.add(...inactiveClasses);
+        input.placeholder = 'Chatbot mode: ask about tasks or summaries...';
+    }
+
+    if (chatHistory.length === 0) {
+        renderWelcomeMessage(tab);
+    }
+}
 
 // ─── Toggle ──────────────────────────────────────────
 function toggleChat() {
@@ -94,7 +138,45 @@ function toggleChat() {
     const open = win.classList.contains('hidden');
     win.classList.toggle('hidden', !open);
     icon.textContent = open ? '✕' : '🤖';
-    if (open) document.getElementById('chat-input').focus();
+    if (open) {
+        setChatTab(activeChatTab);
+        renderWelcomeMessage(activeChatTab);
+        document.getElementById('chat-input').focus();
+    }
+}
+
+function renderWelcomeMessage(tab) {
+    const container = document.getElementById('chat-messages');
+    if (chatHistory.length > 0) return;
+
+    const existing = container.querySelector('.welcome-msg');
+    if (existing) existing.remove();
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex gap-2 welcome-msg';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0';
+    avatar.style.background = '#ede9fe';
+    avatar.textContent = '🤖';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bg-white rounded-2xl rounded-tl-sm px-3 py-2 text-sm text-gray-700 shadow-sm max-w-xs';
+
+    if (tab === 'assistant') {
+        bubble.innerHTML = `Hi! I'm your Task Assistant 👋<br>
+            Use this mode for task creation, updates, and deletion only.<br><br>
+            <span class="text-gray-400 text-xs">Try: "Update task 3 to done"</span>`;
+    } else {
+        bubble.innerHTML = `Hi! I'm your Task Chatbot 👋<br>
+            Ask me about your tasks, search your list, or get summaries.<br><br>
+            <span class="text-gray-400 text-xs">Try: "Show overdue tasks"</span>`;
+    }
+
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(bubble);
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
 }
 
 // ─── Send Message ─────────────────────────────────────
@@ -131,7 +213,7 @@ async function sendMessage() {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             },
-            body: JSON.stringify({ message: text, history: chatHistory.slice(-10) }),
+            body: JSON.stringify({ message: text, history: chatHistory.slice(-10), mode: activeChatTab }),
         });
 
         const data = await res.json();
@@ -176,7 +258,7 @@ async function confirmAction(confirmed) {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             },
-            body: JSON.stringify({ confirmations: pendingConf, history: chatHistory.slice(-6) }),
+            body: JSON.stringify({ confirmations: pendingConf, history: chatHistory.slice(-6), mode: activeChatTab }),
         });
 
         removeLoadingMessage();

@@ -15,14 +15,18 @@ class ChatController extends Controller
     {
         $request->validate([
             'message'           => 'required|string|max:1000',
+            'mode'              => 'nullable|string|in:chatbot,assistant',
             'history'           => 'nullable|array',
             'history.*.role'    => 'in:user,assistant',
             'history.*.content' => 'string',
         ]);
 
+        $mode = $request->input('mode', 'chatbot');
+
         $result = $this->chatService->handleMessage(
             $request->message,
-            $request->history ?? []
+            $request->history ?? [],
+            $mode
         );
 
         $statusCode = isset($result['error']) ? 503 : 200;
@@ -34,12 +38,16 @@ class ChatController extends Controller
     {
         $request->validate([
             'confirmations' => 'required|array',
+            'mode'          => 'nullable|string|in:chatbot,assistant',
             'history'       => 'nullable|array',
         ]);
 
+        $mode = $request->input('mode', 'chatbot');
+
         $result = $this->chatService->handleConfirmedActions(
             $request->confirmations,
-            $request->history ?? []
+            $request->history ?? [],
+            $mode
         );
 
         return response()->json($result);

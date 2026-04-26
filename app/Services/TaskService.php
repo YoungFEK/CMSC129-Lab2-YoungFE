@@ -107,10 +107,17 @@ class TaskService
 
     public function updateTaskFromAI(array $args): array
     {
-        $task = $this->taskRepository->findById($args['id']);
+        $task = null;
+
+        if (!empty($args['id'])) {
+            $task = $this->taskRepository->findById($args['id']);
+        } elseif (!empty($args['task_title'])) {
+            $task = $this->taskRepository->findByTitle($args['task_title']);
+        }
 
         if (!$task) {
-            return ['error' => "Task with ID {$args['id']} not found."];
+            $identifier = !empty($args['id']) ? "ID {$args['id']}" : "title '{$args['task_title']}'";
+            return ['error' => "Task with {$identifier} not found."];
         }
 
         if (!empty($args['category_name']) && empty($args['category_id'])) {

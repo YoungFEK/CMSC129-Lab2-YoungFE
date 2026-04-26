@@ -1,6 +1,6 @@
 # Task Manager - CMSC129 Lab 2
 
-A full-stack web application demonstrating the **MVC (Model-View-Controller)** architectural pattern using **Laravel framework**, **PostgreSQL**, and **Blade templating engine**.
+A full-stack web application demonstrating the **MVC (Model-View-Controller)** architectural pattern using **Laravel framework**, **PostgreSQL**, **Blade templating engine**, and an integrated AI assistant.
 
 ## 📸 Screenshots
 
@@ -21,6 +21,7 @@ A full-stack web application demonstrating the **MVC (Model-View-Controller)** a
 - ⭐ Set task priority levels (Low, Medium, High)
 - 🗑️ Soft-delete and restore tasks
 - 📅 Set due dates for tasks
+- 🤖 Use an AI chat assistant for task queries and CRUD operations
 
 ---
 
@@ -31,6 +32,8 @@ A full-stack web application demonstrating the **MVC (Model-View-Controller)** a
 - **Templating**: Blade (Laravel's templating engine)
 - **Frontend**: Tailwind CSS
 - **ORM**: Eloquent
+- **AI Service**: Groq AI
+- **AI Model**: `llama-3.3-70b-versatile`
 - **Dependency Manager**: Composer
 
 ---
@@ -61,14 +64,21 @@ A full-stack web application demonstrating the **MVC (Model-View-Controller)** a
    - Filter by category
    - Works with pagination
 
-3. **Database Relationships** ✅
+3. **AI Assistant** ✅
+   - Floating AI chat widget available on all pages
+   - Chatbot and Assistant subtabs for clearer interaction
+   - Chatbot mode supports search, summaries, and task queries
+   - Assistant mode supports task creation, update, and deletion
+   - Update can identify tasks by `id` or task `title`
+
+4. **Database Relationships** ✅
    - Task `belongsTo` Category (Many-to-One)
    - Category `hasMany` Tasks
    - Eloquent relationship properly implemented
 
-4. **Database Seeding** ✅
-   - `CategorySeeder` - Creates 5 sample categories
-   - `TaskSeeder` - Creates 15 sample tasks using Faker
+5. **Database Seeding** ✅
+   - `CategorySeeder` creates sample categories
+   - `TaskSeeder` creates sample tasks using Faker
    - Run with `php artisan db:seed`
 
 ---
@@ -209,7 +219,14 @@ DB_USERNAME=postgres
 DB_PASSWORD=your_password
 ```
 
-### Step 5: Create PostgreSQL Database
+### Step 5: AI Configuration
+Add your Groq AI service credentials to `.env`:
+```env
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+### Step 6: Create PostgreSQL Database
 ```bash
 # Using psql
 psql -U postgres
@@ -217,7 +234,7 @@ CREATE DATABASE cmsc129_lab2;
 \q
 ```
 
-### Step 6: Run Migrations
+### Step 7: Run Migrations
 ```bash
 # Create tables
 php artisan migrate
@@ -226,19 +243,45 @@ php artisan migrate
 php artisan db:seed
 ```
 
-### Step 7: Build Assets
+### Step 8: Build Assets
 ```bash
 npm run build
 # or for development with watch mode
 npm run dev
 ```
 
-### Step 8: Start Development Server
+### Step 9: Start Development Server
 ```bash
 php artisan serve
 ```
 
 Visit: `http://localhost:8000`
+
+---
+
+## 🔧 Environment Variables
+
+Required environment variables for AI and database integration:
+
+```env
+APP_NAME=TaskManager
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=cmsc129_lab2
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+Add these values to your copied `.env` file.
 
 ---
 

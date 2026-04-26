@@ -23,15 +23,15 @@ class ChatService
 
     // ── Public Methods (called by ChatController) ─────────
 
-    public function handleMessage(string $userMessage, array $history): array
+    public function handleMessage(string $userMessage, array $history, string $mode = 'chatbot'): array
     {
         $messages = array_merge(
-            [['role' => 'system', 'content' => $this->buildSystemPrompt()]],
+            [['role' => 'system', 'content' => $this->buildSystemPrompt($mode)]],
             array_slice($history, -10),
             [['role' => 'user', 'content' => $userMessage]]
         );
 
-        $response = $this->callGroq($messages, $this->getToolDefinitions());
+        $response = $this->callGroq($messages, $this->getToolDefinitions($mode));
 
         if (!$response) {
             return ['error' => 'AI service unavailable. Please try again.'];
@@ -51,7 +51,7 @@ class ChatService
         ];
     }
 
-    public function handleConfirmedActions(array $confirmations, array $history): array
+    public function handleConfirmedActions(array $confirmations, array $history, string $mode = 'chatbot'): array
     {
         $toolResults = [];
 
@@ -66,15 +66,19 @@ class ChatService
         }
 
         $summaryMessages = array_merge(
-            [['role' => 'system', 'content' => $this->buildSystemPrompt()]],
+            [['role' => 'system', 'content' => $this->buildSystemPrompt($mode)]],
             array_slice($history, -6),
             $toolResults,
             [['role' => 'user', 'content' => 'Please summarize what was just completed in a friendly way.']]
         );
 
         $summary = $this->callGroq($summaryMessages, null);
-        $reply   = $summary['choices'][0]['message']['content']
-            ?? 'Done! The operation was completed successfully.';
+
+        if (!isset($summary['choices'][0]['message']['content'])) {
+            $reply = $this->buildToolResultSummary($toolResults);
+        } else {
+            $reply = $summary['choices'][0]['message']['content'];
+        }
 
         return [
             'reply'       => $reply,
@@ -204,11 +208,35 @@ class ChatService
 
     // ── System Prompt ─────────────────────────────────────
 
-    private function buildSystemPrompt(): string
+    private function buildSystemPrompt(string $mode = 'chatbot'): string
     {
         $today      = Carbon::today()->format('Y-m-d');
         $categories = $this->taskRepository->getAllCategories();
         $catList    = $categories->map(fn($c) => "{$c->name} (id:{$c->id})")->implode(', ');
+
+        if ($mode === 'assistant') {
+            return <<<PROMPT
+            You are a task assistant for a Laravel To-Do app. You may only perform CRUD operations.
+            Today's date is {$today}.
+
+            ## Database Schema
+            - Tasks: id, title, description, due_date (YYYY-MM-DD), status (pending|in_progress|done), priority (low|medium|high), category_id
+            - Categories: id, name — Available: {$catList}
+
+            ## Your Capabilities
+            - You can create tasks with create_task.
+            - You can update tasks with update_task (identify the task by id or task_title).
+            - You can delete tasks with delete_task or bulk_delete_tasks.
+
+            ## Rules
+            1. Use ONLY the provided CRUD tools: create_task, update_task, delete_task, bulk_delete_tasks.
+            2. Do NOT provide task summaries, statistics, category listings, or search results.
+            3. If the user asks for anything other than create/update/delete, reply: "Use Chatbot mode for summaries, search, and task queries."
+            4. Ask only for missing fields needed to complete the task operation.
+            5. Never expose raw database errors to the user.
+            6. Be concise and courteous.
+            PROMPT;
+        }
 
         return <<<PROMPT
         You are a helpful task management assistant for a Laravel To-Do app.
@@ -249,6 +277,25 @@ class ChatService
         };
     }
 
+    private function buildToolResultSummary(array $toolResults): string
+    {
+        $lines = [];
+
+        foreach ($toolResults as $toolResult) {
+            $payload = json_decode($toolResult['content'], true);
+
+            if (is_array($payload) && isset($payload['message'])) {
+                $lines[] = $payload['message'];
+            } elseif (is_array($payload) && isset($payload['error'])) {
+                $lines[] = 'Error: ' . $payload['error'];
+            } else {
+                $lines[] = 'The requested operation completed successfully.';
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
     private function buildConfirmationMessage(array $confirmations): string
     {
         $lines = ["⚠️ I need your confirmation before proceeding:\n"];
@@ -261,9 +308,90 @@ class ChatService
 
     // ── Tool Definitions ──────────────────────────────────
 
-    private function getToolDefinitions(): array
+    private function getToolDefinitions(string $mode = 'chatbot'): array
     {
-        return [
+        $crudTools = [
+            [
+                'type' => 'function',
+                'function' => [
+                    'name'        => 'create_task',
+                    'description' => 'Create a new task.',
+                    'parameters'  => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'title'         => ['type' => 'string',  'description' => 'Task title (required)'],
+                            'description'   => ['type' => 'string',  'description' => 'Task details'],
+                            'due_date'      => ['type' => 'string',  'description' => 'Due date as YYYY-MM-DD'],
+                            'status'        => ['type' => 'string',  'enum' => ['pending', 'in_progress', 'done']],
+                            'priority'      => ['type' => 'string',  'enum' => ['low', 'medium', 'high']],
+                            'category_id'   => ['type' => 'integer', 'description' => 'Category ID'],
+                            'category_name' => ['type' => 'string',  'description' => 'Category name (alternative to ID)'],
+                        ],
+                        'required' => ['title'],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name'        => 'update_task',
+                    'description' => 'Update an existing task by ID or task_title. Only provide fields to change.',
+                    'parameters'  => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'id'            => ['type' => 'integer', 'description' => 'Task ID to update'],
+                            'task_title'    => ['type' => 'string',  'description' => 'Task title to identify the task when ID is not provided'],
+                            'title'         => ['type' => 'string',  'description' => 'New title for the task'],
+                            'description'   => ['type' => 'string'],
+                            'due_date'      => ['type' => 'string',  'description' => 'YYYY-MM-DD'],
+                            'status'        => ['type' => 'string',  'enum' => ['pending', 'in_progress', 'done']],
+                            'priority'      => ['type' => 'string',  'enum' => ['low', 'medium', 'high']],
+                            'category_id'   => ['type' => 'integer'],
+                            'category_name' => ['type' => 'string'],
+                        ],
+                        'required' => [],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name'        => 'delete_task',
+                    'description' => 'Soft-delete (move to trash) a single task by ID.',
+                    'parameters'  => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'id' => ['type' => 'integer', 'description' => 'Task ID to delete'],
+                        ],
+                        'required' => ['id'],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name'        => 'bulk_delete_tasks',
+                    'description' => 'Soft-delete multiple tasks at once.',
+                    'parameters'  => [
+                        'type'       => 'object',
+                        'properties' => [
+                            'ids' => [
+                                'type'  => 'array',
+                                'items' => ['type' => 'integer'],
+                                'description' => 'Array of task IDs to delete',
+                            ],
+                        ],
+                        'required' => ['ids'],
+                    ],
+                ],
+            ],
+        ];
+
+        if ($mode === 'assistant') {
+            return $crudTools;
+        }
+
+        return array_merge($crudTools, [
             [
                 'type' => 'function',
                 'function' => [
@@ -307,79 +435,6 @@ class ChatService
                     ],
                 ],
             ],
-            [
-                'type' => 'function',
-                'function' => [
-                    'name'        => 'create_task',
-                    'description' => 'Create a new task.',
-                    'parameters'  => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'title'         => ['type' => 'string',  'description' => 'Task title (required)'],
-                            'description'   => ['type' => 'string',  'description' => 'Task details'],
-                            'due_date'      => ['type' => 'string',  'description' => 'Due date as YYYY-MM-DD'],
-                            'status'        => ['type' => 'string',  'enum' => ['pending', 'in_progress', 'done']],
-                            'priority'      => ['type' => 'string',  'enum' => ['low', 'medium', 'high']],
-                            'category_id'   => ['type' => 'integer', 'description' => 'Category ID'],
-                            'category_name' => ['type' => 'string',  'description' => 'Category name (alternative to ID)'],
-                        ],
-                        'required' => ['title'],
-                    ],
-                ],
-            ],
-            [
-                'type' => 'function',
-                'function' => [
-                    'name'        => 'update_task',
-                    'description' => 'Update an existing task by ID. Only provide fields to change.',
-                    'parameters'  => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'id'            => ['type' => 'integer', 'description' => 'Task ID to update'],
-                            'title'         => ['type' => 'string'],
-                            'description'   => ['type' => 'string'],
-                            'due_date'      => ['type' => 'string',  'description' => 'YYYY-MM-DD'],
-                            'status'        => ['type' => 'string',  'enum' => ['pending', 'in_progress', 'done']],
-                            'priority'      => ['type' => 'string',  'enum' => ['low', 'medium', 'high']],
-                            'category_id'   => ['type' => 'integer'],
-                            'category_name' => ['type' => 'string'],
-                        ],
-                        'required' => ['id'],
-                    ],
-                ],
-            ],
-            [
-                'type' => 'function',
-                'function' => [
-                    'name'        => 'delete_task',
-                    'description' => 'Soft-delete (move to trash) a single task by ID.',
-                    'parameters'  => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'id' => ['type' => 'integer', 'description' => 'Task ID to delete'],
-                        ],
-                        'required' => ['id'],
-                    ],
-                ],
-            ],
-            [
-                'type' => 'function',
-                'function' => [
-                    'name'        => 'bulk_delete_tasks',
-                    'description' => 'Soft-delete multiple tasks at once.',
-                    'parameters'  => [
-                        'type'       => 'object',
-                        'properties' => [
-                            'ids' => [
-                                'type'  => 'array',
-                                'items' => ['type' => 'integer'],
-                                'description' => 'Array of task IDs to delete',
-                            ],
-                        ],
-                        'required' => ['ids'],
-                    ],
-                ],
-            ],
-        ];
+        ]);
     }
 }

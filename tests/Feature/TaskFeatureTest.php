@@ -101,4 +101,44 @@ class TaskFeatureTest extends TestCase
         $response->assertSeeText('In Progress');
         $response->assertSee('badge-in_progress', false);
     }
+
+    public function test_search_with_category_filter_respects_both_search_and_category(): void
+    {
+        $categoryA = Category::create([
+            'name' => 'Work',
+            'description' => 'Work-related tasks',
+        ]);
+
+        $categoryB = Category::create([
+            'name' => 'Personal',
+            'description' => 'Personal tasks',
+        ]);
+
+        Task::create([
+            'title' => 'Urgent report',
+            'description' => 'Complete the urgent report before Friday',
+            'due_date' => now()->addDays(2)->toDateString(),
+            'status' => 'pending',
+            'priority' => 'high',
+            'category_id' => $categoryA->id,
+        ]);
+
+        Task::create([
+            'title' => 'Urgent meeting',
+            'description' => 'Schedule an urgent meeting with the team',
+            'due_date' => now()->addDays(3)->toDateString(),
+            'status' => 'pending',
+            'priority' => 'medium',
+            'category_id' => $categoryB->id,
+        ]);
+
+        $response = $this->get(route('tasks.index', [
+            'search' => 'Urgent',
+            'category' => $categoryA->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Urgent report');
+        $response->assertDontSee('Urgent meeting');
+    }
 }

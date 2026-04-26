@@ -36,7 +36,9 @@ class TaskRepository
             $query->whereDate('due_date', '<', Carbon::today())
                   ->where('status', '!=', 'done');
 
-        return $query->orderByDesc('created_at')->get();
+        return $query->orderByDesc('created_at')
+                     ->orderByDesc('id')
+                     ->get();
     }
 
     public function findById(int $id): ?Task
@@ -47,6 +49,14 @@ class TaskRepository
     public function findByIdWithTrashed(int $id): ?Task
     {
         return Task::withTrashed()->findOrFail($id);
+    }
+
+    public function findByTitle(string $title): ?Task
+    {
+        return Task::with('category')
+            ->where('title', 'like', "%{$title}%")
+            ->orderBy('created_at', 'desc')
+            ->first();
     }
 
     public function getPaginated(array $filters = [], int $perPage = 10)
