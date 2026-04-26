@@ -7,6 +7,10 @@ A full-stack web application demonstrating the **MVC (Model-View-Controller)** a
 
 <img width="1892" height="832" alt="image" src="https://github.com/user-attachments/assets/6c255cf9-25e6-449c-91b9-0c4e54d40f19" />
 <img width="1918" height="856" alt="image" src="https://github.com/user-attachments/assets/aa1e60b8-a069-4aa8-a046-c2b579dbdb30" />
+<img width="1896" height="865" alt="image" src="https://github.com/user-attachments/assets/725fb368-1960-49c5-90ac-0bf0a16a8bf2" />
+<img width="1898" height="858" alt="image" src="https://github.com/user-attachments/assets/0b3f2f64-66e3-4999-bbba-8eadce41266a" />
+
+
 
 
 ---
@@ -33,7 +37,7 @@ A full-stack web application demonstrating the **MVC (Model-View-Controller)** a
 - **Frontend**: Tailwind CSS
 - **ORM**: Eloquent
 - **AI Service**: Groq AI
-- **AI Model**: `llama-3.3-70b-versatile`
+- **AI Model**: `llama-3.3-70b-versatile` or llama-3.1-8b-instant 
 - **Dependency Manager**: Composer
 
 ---
@@ -278,7 +282,7 @@ DB_USERNAME=postgres
 DB_PASSWORD=your_password
 
 GROQ_API_KEY=your_groq_api_key
-GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_MODEL=llama-3.3-70b-versatile or llama-3.1-8b-instant 
 ```
 
 Add these values to your copied `.env` file.
