@@ -116,4 +116,7 @@
             </div>
         @endif
     </div>
+
+    <!-- AI Chat Widget -->
+    <x-chat-widget />
 @endsection
